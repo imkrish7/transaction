@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:18-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: vessifyadmin
+      POSTGRES_PASSWORD: vessify123
+      POSTGRES_DB: vessify
+    volumes:
+      - db:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+volumes:
+  db:
