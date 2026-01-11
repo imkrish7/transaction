@@ -71,5 +71,13 @@ npm run dev
 ```
 Then start using it
 
+# LLM
+
+Extracting transactions from messy text, I am using Ollama. You can use another model to so change backend 
+```cmd/backend/services/transaction-extracter.ts 
+update llm like openAI or gemini
+```
+It's up to you, so please make sure you have installed Ollama and llama3.2 
+
 
 
