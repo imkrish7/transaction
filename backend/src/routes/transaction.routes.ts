@@ -16,27 +16,29 @@ transactionRoutes.post("/extract", async (c) => {
     const user = c.get("user");
     if (!user) throw new Error("User not found");
 
-    const requestPayload = await c.req.text();
+    const requestPayload = await c.req.json();
+
     const validatedPayload = TransactionSchema.safeParse(requestPayload);
 
     if (!validatedPayload.success) {
       return c.json({ error: "Bad request" }, 400);
     }
 
-    const { text } = validatedPayload.data;
-    const transaction = await extractTransaction(text);
+    const { txText } = validatedPayload.data;
+    const transaction = await extractTransaction(txText);
+
     const newTransaction = await prisma.transaction.create({
       data: {
         amount: transaction.amount,
         category: transaction.type,
-        transactionDate: transaction.date,
+        transactionDate: new Date(transaction.date).toISOString(),
         description: transaction.description ?? "",
         userId: user.id,
         merchantName: transaction.merchant ?? "",
         runningBalance: transaction.balance ?? 0,
         transactionType: transaction.type,
         currency: transaction.currency ?? "INR",
-        rawText: text,
+        rawText: txText,
       },
     });
     return c.json(transaction);
@@ -51,35 +53,42 @@ transactionRoutes.get("/", async (c) => {
     const user = c.get("user");
     if (!user) throw new Error("User not found");
 
-    const { currentPage, page, cursor } = c.req.query();
+    const { dir, page, cursor } = c.req.query();
 
     const offset = 10;
 
     let query: Prisma.TransactionFindManyArgs = {
-      take: parseInt(currentPage) > parseInt(page) ? -offset : offset,
-      cursor: { id: user.id },
+      take: dir === "prev" ? -offset : offset,
       where: { userId: user.id },
-      orderBy: { transactionDate: "desc" },
+      orderBy: { id: "desc" },
     };
 
-    if (cursor) {
+    if (cursor !== "null") {
       const decodedCursor = decodeCursor(cursor);
       query.cursor = { id: decodedCursor };
       query.skip = 1;
     }
-    const transactions = await prisma.transaction.findMany(query);
-    const nextCursor = transactions[-1].id;
-    const prevCursor = parseInt(page) == 1 ? null : transactions[0].id;
+
+    let transactions = await prisma.transaction.findMany(query);
+    if (dir === "prev") {
+      transactions = transactions.reverse();
+    }
+    const first = transactions[0] ?? null;
+    const last = transactions[transactions.length - 1] ?? null;
+
+    const nextCursor = last ? encodeCursor(last.id) : null;
+    const prevCursor = first ? encodeCursor(first.id) : null;
 
     return c.json({
-      currentPage: parseInt(currentPage),
+      currentPage: parseInt(page),
       totalPages: Math.ceil(transactions.length / offset),
       transactions,
-      next: encodeCursor(nextCursor),
-      prev: encodeCursor(prevCursor),
+      next: nextCursor,
+      prev: prevCursor,
       hasMore: transactions.length === offset,
     });
   } catch (error) {
+    console.error(error);
     return c.json({ error: "Failed to fetch transactions" }, 500);
   }
 });

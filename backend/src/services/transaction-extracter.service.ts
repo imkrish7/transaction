@@ -16,7 +16,7 @@ const TransactionSchema = z.object({
 type Transaction = z.infer<typeof TransactionSchema>;
 
 const llm = new ChatOllama({
-  model: "llama2",
+  model: "llama3.2",
   temperature: 0,
   maxRetries: 2,
 });

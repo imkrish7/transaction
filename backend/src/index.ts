@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { auth } from "./lib/auth.ts";
 import authRoutes from "./routes/auth.routes.ts";
+import transactionRoutes from "./routes/transaction.routes.ts";
 import type { AppContext } from "./types/app.types.ts";
 
 const app = new Hono<AppContext>();
@@ -21,6 +22,7 @@ app.use(
 );
 
 app.route("/api", authRoutes);
+app.route("/api", transactionRoutes);
 
 serve(
   {
